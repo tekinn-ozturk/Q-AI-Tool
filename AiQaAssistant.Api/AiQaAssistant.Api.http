@@ -1,0 +1,6 @@
+@AiQaAssistant.Api_HostAddress = http://localhost:5272
+
+GET {{AiQaAssistant.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
