@@ -8,6 +8,8 @@
         public long FileSize { get; set; }
         public string Message { get; set; } = string.Empty;
 
+        public string Text { get; set; }
+
 
     }
 }

@@ -1,5 +1,6 @@
 ﻿using AiQaAssistant.Api.DTOs;
 using AiQaAssistant.Api.Interfaces;
+using AiQaAssistant.Api.Parsers.Interfaces;
 
 
 namespace AiQaAssistant.Api.Services
@@ -10,14 +11,16 @@ namespace AiQaAssistant.Api.Services
         //Uygulamanın çalıştığı ortam ve klasör bilgileri için lazım olanın interface'ini (IWebHostEnvironment) inject ettik ve bir örneğini aldık.
         private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
+        private readonly IEnumerable<IDocumentParser> _parsers;
 
         //constructor metod yani Document Service her çağrıldığında bu metotta çalışacak.
-        public DocumentService(IWebHostEnvironment environment, IConfiguration configuration)
+        public DocumentService(IWebHostEnvironment environment, IConfiguration configuration, IEnumerable<IDocumentParser> parsers)
         {
             //bu DocumentService class'ı eger bi environment ile çağrılırsa parametredeki env ile bizim yarattığımız _env 'ye eşitlememiz gerekiyor, çünki buradaki tüm işlemler _environment üzerinden dönücek çünkü _environment artık zaten bir IWebHostEnvironment örneği. eşitliyoruzz ya.
 
             _environment = environment;
             _configuration = configuration;
+            _parsers = parsers;
         }
         public async Task<UploadDocumentResponseDto> UploadDocumentAsync(IFormFile file)
         {
@@ -36,6 +39,15 @@ namespace AiQaAssistant.Api.Services
 
             var fileExtension = Path.GetExtension(file.FileName).ToLowerInvariant();
             //Yüklenen dosyanın uzantısı alınır. (.pdf, .jpg kısmını alır)
+
+            //_parsers listesindeki SupportedExtension değeri bizim dosyanın uzantısıyla aynı olan ilk parser'ı bul.
+            var parser = _parsers.FirstOrDefault(
+             p => p.SupportedExtension == fileExtension);
+
+            if (parser == null)
+            {
+                throw new ArgumentException("Bu dosya tipi için parser bulunamadı.");
+            }
 
             // kabul edilen dosya tipi içermiyorsa alınan dosya tipini bu uyarıyı patlatır.
             if (!allowedExtensions.Contains(fileExtension))
@@ -60,9 +72,13 @@ namespace AiQaAssistant.Api.Services
             var filePath = Path.Combine(uploadsFolder, uniqueFileName);
 
             //bilgisayarın localinde bi dosya yaratıyor 
-            await using var stream = new FileStream(filePath, FileMode.Create);
-            //ve onun içine yazıyor
-            await file.CopyToAsync(stream);
+            await using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                //ve onun içine yazıyor
+                await file.CopyToAsync(stream);
+
+            }
+            var text = await parser.ParseAsync(filePath);
 
             //service UploadDocumentResponseDto dönmeli servis bu DTO imzalı
             return new UploadDocumentResponseDto
@@ -70,7 +86,8 @@ namespace AiQaAssistant.Api.Services
                 FileName = uniqueFileName,
                 FilePath = filePath,
                 FileSize = file.Length,
-                Message = "Dosya başarıyla yüklendi."
+                Message = "Dosya başarıyla yüklendi.",
+                Text = text 
             };
         }
     }

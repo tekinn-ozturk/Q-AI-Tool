@@ -1,5 +1,7 @@
 
 using AiQaAssistant.Api.Interfaces;
+using AiQaAssistant.Api.Parsers;
+using AiQaAssistant.Api.Parsers.Interfaces;
 using AiQaAssistant.Api.Services;
 
 namespace AiQaAssistant.Api
@@ -17,6 +19,7 @@ namespace AiQaAssistant.Api
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
             builder.Services.AddScoped<IDocumentService, DocumentService>();
+            builder.Services.AddScoped<IDocumentParser, PdfDocumentParser>();
 
             var app = builder.Build();
 
